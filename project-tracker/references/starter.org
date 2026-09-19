@@ -1,0 +1,55 @@
+#+TITLE: <project> — project tracker
+#+STARTUP: overview
+#+TODO: TODO(t) NEXT(n) WAITING(w) BLOCKED(b) | DONE(d) DROPPED(x)
+#+TAGS: docs(c) release(r)
+
+* How this file works
+:PROPERTIES:
+:CUSTOM_ID: how
+:END:
+The planning bible. If a next step is not written here, it does not exist — it will be
+lost between sessions, and this project spans several.
+
+- *Read it first.* At the start of a session, read this file and work from ~NEXT~.
+- *Write it as you go.* A step becomes ~DONE~ in the same commit as the work it
+  describes, with ~CLOSED~. Something learned mid-task becomes a ~TODO~ before the
+  session ends, even when nobody will act on it soon.
+- *Statuses are honest.* Written and untested is not ~DONE~ — it is ~WAITING~ with a
+  note saying what is untested. ~BLOCKED~ names what it is blocked on.
+- *Detail lives in ~docs/~.* This file says what is next and why; the long-form notes
+  (test recipes, measurements, design arguments) live in ~docs/*.md~ and are linked
+  from here, never duplicated.
+- *Decisions get recorded* under [[#decisions]] with a date and a reason, so a settled
+  question is not re-proposed three sessions later.
+
+* Now
+:PROPERTIES:
+:CUSTOM_ID: now
+:END:
+One or two things in flight, and whatever gates them.
+
+** NEXT <the one thing to pick up now>
+
+* Workstreams
+:PROPERTIES:
+:CUSTOM_ID: workstreams
+:END:
+The standing areas of work. Rename these to the areas this project actually has.
+
+** <area>
+*** TODO <a step, phrased as the thing that will be true when it is done>
+
+* Backlog
+:PROPERTIES:
+:CUSTOM_ID: backlog
+:END:
+Wanted, not scheduled. Nothing here blocks anything.
+
+* Decisions
+:PROPERTIES:
+:CUSTOM_ID: decisions
+:END:
+Settled, with the reason. Do not re-propose without new evidence.
+
+** <YYYY-MM-DD> — <what was decided>
+<why, in a sentence or two, including what was rejected and on what evidence>
