@@ -1,0 +1,43 @@
+#+TITLE: project-tracker — project tracker
+#+STARTUP: overview
+#+TODO: TODO(t) NEXT(n) WAITING(w) BLOCKED(b) | DONE(d) DROPPED(x)
+#+TAGS: docs(c) release(r)
+
+* How this file works
+Read this file before starting work. Keep statuses and next steps accurate, and
+commit meaningful tracker updates with the work they describe. Follow the commit
+gate in [[file:AGENTS.md][AGENTS.md]]. Detailed skill instructions live in
+[[file:project-tracker/SKILL.md][SKILL.md]].
+
+* Now
+No open implementation work.
+
+* Workstreams
+** Skill maintenance
+*** DONE Require a tracker update before every commit
+CLOSED: [2026-09-20 Sun 11:09]
+Added mandatory content review, a read-only Git state check, and a post-commit
+cleanliness check. Updated the README, adoption instructions, and starter tracker.
+Verified: skill validation, shell syntax, and 15 temporary-repository scenarios
+covering missing, empty, unchanged, partially staged, conflicted, and valid
+trackers; nested invocation; unrelated changes; and cleanliness after commit.
+
+*** DONE Update the installed GSD skill
+CLOSED: [2026-09-20 Sun 11:09]
+Copied the updated skill, starter tracker, and gate script to the installed GSD
+skill directory. Verified an exact directory match, skill validation, and shell
+syntax.
+
+*** DONE Adopt the tracker and persistent commit rule in this repository
+CLOSED: [2026-09-20 Sun 11:09]
+Recorded the completed work here and added AGENTS.md with the local gate command.
+Verified the entries against this session's changes and validation results.
+
+* Backlog
+No follow-ups identified.
+
+* Decisions
+** 2026-09-20 — Require both content review and the Git state check
+The script can verify staging and cleanliness; the agent must verify meaningful
+progress, truthful statuses, and captured follow-ups. The skill requires the
+workflow gate and does not automatically install a Git hook.

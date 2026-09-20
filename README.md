@@ -16,12 +16,16 @@ the start of a session, written as the work happens, committed alongside it.
 
 ## What it does
 
-The skill teaches an agent four habits:
+The skill teaches an agent five habits:
 
 - **Read the tracker first**, before exploring the code, and work from `NEXT`.
 - **Close a step in the same commit as the work**, with a `CLOSED` timestamp — a
   tracker updated in a later commit drifts, and one updated in a later session
   lies.
+- **Pass a gate before every commit.** Reconcile the tracker with the staged
+  work, stage a meaningful update, and run the bundled check. Missing updates,
+  unstaged tracker edits, merge conflicts, and staged whitespace errors block
+  the commit. Verify that the tracker has no pending Git changes afterward.
 - **Write down what it learns**, the moment it learns it: a follow-up, a limit it
   hit, a corner it cut on purpose.
 - **Keep statuses honest.** `DONE` means it was seen to work. Written-but-unrun is
@@ -82,10 +86,26 @@ is `WAITING`, `BLOCKED` names what it waits on. Settled questions go under
 `* Decisions` with the date. Long-form detail lives in `docs/*.md` and is linked,
 never duplicated. If a task arrives that the tracker does not mention, add it
 there first, then do it.
+
+Before every commit, including partial work and amendments, update the tracker
+to reflect the staged work, reconcile statuses, follow-ups, decisions, and
+`NEXT`, and stage the meaningful tracker update in the same commit. Run the
+project-tracker skill's `scripts/check-commit-gate.sh`; a failure blocks the
+commit until fixed. Review the content as well as the check result. After the
+commit, `git status --porcelain --untracked-files=all -- project.org` must be
+empty. Never discard or include unrelated changes just to pass the gate.
 ```
 
-That last line is the one that matters most. It is what stops a tracker becoming
-a file the agent reads and never writes.
+Run the check from the repository being committed, using the installed skill's
+path, for example:
+
+```sh
+sh ~/.claude/skills/project-tracker/scripts/check-commit-gate.sh
+```
+
+The check is read-only and verifies Git state. The agent must also review the
+tracker's content for accuracy. This is a required agent workflow gate; the
+skill does not automatically install a Git hook.
 
 ## License
 

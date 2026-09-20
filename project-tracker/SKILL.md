@@ -1,6 +1,6 @@
 ---
 name: project-tracker
-description: Keep a repository's next steps in a `project.org` org-mode tracker, the file that survives between sessions when the context window does not. Use when starting work in a repo that has one (read it before anything else, and work from NEXT), when finishing a step (mark it DONE with a CLOSED stamp in the same commit as the work), when something new turns up mid-task (write it down as a TODO before the session ends), when a question gets settled (record it under Decisions with the date), and when a repo whose work spans sessions or branches has no tracker at all (start one from the template here).
+description: Keep a repository's next steps in a `project.org` org-mode tracker across sessions. Use when starting work in a repo with a tracker, before every commit (require a meaningful staged tracker update and pass the commit gate), when finishing a step, discovering follow-ups, or settling decisions, and when adopting a tracker for work that spans sessions or branches.
 ---
 
 <objective>
@@ -78,6 +78,53 @@ Verified by <what you actually ran>.
 The stamp is org's own format: `[YYYY-MM-DD Day HH:MM]`. `date '+[%Y-%m-%d %a %H:%M]'`
 prints it.
 
+## Required commit gate
+**Do not commit until the tracker is reconciled with the work being committed
+and the gate passes.** This applies to every commit, including partial work,
+documentation, fixes, and amendments. A tracker update in a later commit does
+not satisfy the gate.
+
+1. Review the intended commit diff and update `project.org` to match it. Add an
+   untracked task before proceeding. Record meaningful progress or verification
+   evidence even if the task's status stays the same; a timestamp-only edit is
+   not an update.
+2. Clean up the affected entries: verified work is `DONE` with a `CLOSED` stamp
+   and evidence; untested work is `WAITING` with what remains untested;
+   `BLOCKED` names the dependency. Capture follow-ups as `TODO` and settled
+   questions under `Decisions`. Remove stale or duplicate next steps, and keep
+   `NEXT` to one or two actionable items while work remains. Clean means
+   accurate and actionable, not that every item is closed.
+3. Stage the intended work and its tracker update together. Review
+   `git diff --cached -- project.org` against the staged work. Do not sweep
+   unrelated user changes into the commit to make the tracker or repository
+   appear clean.
+4. From the target repository, run the bundled check using the installed
+   skill's directory:
+
+   ```bash
+   sh <skill-dir>/scripts/check-commit-gate.sh
+   ```
+
+   The check fails if the root tracker is missing or empty, unmerged, lacks a
+   staged addition or modification, has unstaged edits, or fails Git's staged
+   whitespace/conflict-marker check. It checks Git state; the content review
+   above is still required. Resolve failures and rerun it before committing.
+   Any change to the intended commit or tracker requires running the gate
+   again. Do not bypass it or substitute a promise to update later.
+5. After a successful commit, run this from the repository root:
+
+   ```bash
+   git status --porcelain --untracked-files=all -- project.org
+   ```
+
+   It must return no output before reporting the tracker clean. If edits
+   remain, preserve them and reconcile them with the work; never discard them
+   just to pass the check. Unrelated working-tree changes may remain.
+
+If the tracker does not exist, adopt it using the steps below before committing.
+The check does not stage, edit, or commit anything, and invoking this skill does
+not itself request a commit. Run the gate when a commit is part of the task.
+
 ## Mid-task discoveries
 A follow-up you noticed, a limit you hit, a corner you cut on purpose: add the
 heading under the right workstream before the session ends, with enough context
@@ -116,6 +163,14 @@ is `WAITING`, `BLOCKED` names what it waits on. Settled questions go under
 `* Decisions` with the date. Long-form detail lives in `docs/*.md` and is linked,
 never duplicated. If a task arrives that the tracker does not mention, add it
 there first, then do it.
+
+Before every commit, including partial work and amendments, update the tracker
+to reflect the staged work, reconcile statuses, follow-ups, decisions, and
+`NEXT`, and stage the meaningful tracker update in the same commit. Run the
+project-tracker skill's `scripts/check-commit-gate.sh`; a failure blocks the
+commit until fixed. Review the content as well as the check result. After the
+commit, `git status --porcelain --untracked-files=all -- project.org` must be
+empty. Never discard or include unrelated changes just to pass the gate.
 ```
 
 ## Branches
@@ -135,6 +190,8 @@ this skill depends on a particular viewer.
 <success_criteria>
 - The tracker was read before the work started, and the work came from `NEXT`.
 - Every finished step is `DONE` with a `CLOSED` stamp, committed with its work.
+- Every commit passes the content review and commit gate with a meaningful
+  staged tracker update; the tracker has no pending Git changes afterward.
 - Nothing learned this session is left only in the conversation.
 - No status claims more than what was actually seen to work.
 </success_criteria>

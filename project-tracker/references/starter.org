@@ -16,6 +16,10 @@ lost between sessions, and this project spans several.
   session ends, even when nobody will act on it soon.
 - *Statuses are honest.* Written and untested is not ~DONE~ — it is ~WAITING~ with a
   note saying what is untested. ~BLOCKED~ names what it is blocked on.
+- *Every commit passes the gate.* Reconcile statuses, follow-ups, decisions, and
+  ~NEXT~; stage a meaningful tracker update with the work, and run the skill's
+  ~scripts/check-commit-gate.sh~. Fix failures before committing. Afterward,
+  ~project.org~ must have no pending Git changes. Keep unrelated changes intact.
 - *Detail lives in ~docs/~.* This file says what is next and why; the long-form notes
   (test recipes, measurements, design arguments) live in ~docs/*.md~ and are linked
   from here, never duplicated.
