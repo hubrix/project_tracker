@@ -67,9 +67,10 @@ sh project-tracker/scripts/gantt          # or, in an agent: /project-tracker ga
 Tracker mode charts the open items under `* Workstreams`, prunes closed ones,
 and flags any item missing an `:Effort:`. Add `:Effort:`, `:BLOCKER:` and
 `:ORDERED:` properties to the tracker for a real schedule. The org conversion
-is plain Python (no Emacs); scheduling needs Ruby (`gem install taskjuggler`)
-and the images need Playwright, or use the bundled Dockerfile (the `gantt`
-script falls back to a locally built `org2gantt` image). See
+is plain Python (no Emacs). Scheduling and images need TaskJuggler and
+Playwright; `sh project-tracker/scripts/org2gantt/install-deps` installs both
+for your user (Ruby 3+ and Python 3.8+, no sudo, about 540 MB), or `gantt` falls
+back to an image built from the bundled Dockerfile. See
 [its README](project-tracker/scripts/org2gantt/README.md).
 
 ## Install

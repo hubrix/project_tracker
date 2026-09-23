@@ -9,8 +9,8 @@ optional PDF, plus the scheduled HTML and `.tjp`.
 | Step | Tool | In → Out | Needs |
 |---|---|---|---|
 | 1 | `orgtj.py` (this directory) | `.org` → `.tjp` | Python 3.8+, stdlib only |
-| 2 | `tj3` (TaskJuggler 3) | `.tjp` → scheduled HTML | Ruby 3+, `gem install taskjuggler` |
-| 3 | headless Chromium via Playwright | HTML → one cropped PNG per report (+ PDF) | `pip install playwright && playwright install chromium` |
+| 2 | `tj3` (TaskJuggler 3) | `.tjp` → scheduled HTML | Ruby 3+; `install-deps` (below) |
+| 3 | headless Chromium via Playwright | HTML → one cropped PNG per report (+ PDF) | Python 3.8+; `install-deps` (below) |
 
 No Emacs. `--tjp-only` needs only Python; a `.tjp` input skips step 1. The
 source `.org` is read, never written.
@@ -18,9 +18,20 @@ source `.org` is read, never written.
 ## Install
 
 ```sh
-gem install taskjuggler
-pip install playwright && playwright install chromium
+sh install-deps
 ```
+
+Needs Ruby 3+ and Python 3.8+; no sudo. It installs the versions pinned in
+`Gemfile` (TaskJuggler) and `requirements.txt` (Playwright) into
+`${ORG2GANTT_HOME:-~/.local/share/org2gantt}`, and Chromium's headless shell
+into Playwright's cache: about 540 MB in total. It ends with a test render.
+`org2gantt` and `../gantt` use that install before anything on `PATH`. Rerun
+to repair; delete the directory to uninstall. On a bare Linux, the test render
+can fail for missing system libraries; it prints the one `sudo` command
+(`playwright install-deps chromium`) that fixes it.
+
+By hand instead: `gem install taskjuggler -v '~> 3.8'` and
+`pip install -r requirements.txt && playwright install --only-shell chromium`.
 
 Or build the image from this directory:
 

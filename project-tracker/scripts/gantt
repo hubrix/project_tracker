@@ -23,13 +23,15 @@ for arg in "$@"; do
    prev=$arg
 done
 
-if command -v tj3 >/dev/null 2>&1 && python3 -c 'import playwright' 2>/dev/null; then
+deps=${ORG2GANTT_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/org2gantt}
+if { [ -x "$deps/gems/bin/tj3" ] && [ -x "$deps/venv/bin/python" ]; } ||
+   { command -v tj3 >/dev/null 2>&1 && python3 -c 'import playwright' 2>/dev/null; }; then
    "$here/org2gantt/org2gantt" --tracker project.org -o gantt-out "$@" >/dev/null
 elif command -v docker >/dev/null 2>&1 && docker image inspect org2gantt >/dev/null 2>&1; then
    docker run --rm --user "$(id -u):$(id -g)" -v "$root:/work" org2gantt \
       --tracker project.org -o gantt-out "$@" >/dev/null
 else
-   fail "needs tj3 and Playwright (gem install taskjuggler; pip install playwright && playwright install chromium), or: docker build -t org2gantt $here/org2gantt"
+   fail "TaskJuggler and Playwright are not installed; run: sh $here/org2gantt/install-deps (or build the image: docker build -t org2gantt $here/org2gantt)"
 fi
 
 case $out in /*) ;; *) out=$root/$out ;; esac

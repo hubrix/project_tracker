@@ -12,11 +12,28 @@ Usage:
   org2gantt plan.org --tjp-only               # just the .tjp (no tj3 or Chromium needed)
   org2gantt plan.tjp                          # skip conversion
 """
-import argparse, pathlib, shutil, subprocess, sys
+import argparse, os, pathlib, shutil, subprocess, sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import orgtj  # noqa: E402
+
+# Where install-deps puts TaskJuggler (gems/) and Playwright (venv/).
+DEPS = pathlib.Path(os.environ.get("ORG2GANTT_HOME")
+                    or pathlib.Path(os.environ.get("XDG_DATA_HOME") or pathlib.Path.home() / ".local/share")
+                    / "org2gantt")
+INSTALL = f"sh {HERE / 'install-deps'}"
+
+
+def use_installed_deps():
+    """Prefer install-deps' tj3 and Python over whatever is on PATH."""
+    gems = DEPS / "gems"
+    if (gems / "bin" / "tj3").exists():
+        os.environ["GEM_HOME"] = str(gems)
+        os.environ["PATH"] = str(gems / "bin") + os.pathsep + os.environ.get("PATH", "")
+    py = DEPS / "venv" / "bin" / "python"
+    if py.exists() and pathlib.Path(sys.prefix).resolve() != (DEPS / "venv").resolve():
+        os.execv(str(py), [str(py), str(HERE / "org2gantt"), *sys.argv[1:]])
 
 
 def fail(msg):
@@ -40,7 +57,7 @@ def org_to_tjp(src: pathlib.Path, out: pathlib.Path, a) -> pathlib.Path:
 
 def tjp_to_html(tjp: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
     if not shutil.which("tj3"):
-        fail("tj3 not found: gem install taskjuggler (or use --tjp-only)")
+        fail(f"tj3 not found: run {INSTALL} (or gem install taskjuggler, or use --tjp-only)")
     r = subprocess.run(["tj3", "--no-color", "--silent", "-o", str(out), str(tjp)],
                        capture_output=True, text=True)
     for line in (r.stdout + r.stderr).splitlines():
@@ -55,7 +72,7 @@ def html_to_png(html: pathlib.Path, out: pathlib.Path, a):
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        fail("playwright not installed: pip install playwright && playwright install chromium")
+        fail(f"playwright not found: run {INSTALL} (or pip install playwright && playwright install chromium)")
     names = ["plan", "resources"]
     with sync_playwright() as p:
         b = p.chromium.launch()
@@ -75,6 +92,7 @@ def html_to_png(html: pathlib.Path, out: pathlib.Path, a):
 
 
 def main():
+    use_installed_deps()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", type=pathlib.Path, help=".org or .tjp file")
     ap.add_argument("-o", "--out", type=pathlib.Path, default=pathlib.Path("gantt-out"))
