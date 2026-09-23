@@ -1,0 +1,99 @@
+project nil "Website relaunch" "1.0" 2026-10-05 +280d {
+}
+shift s40 "Part time shift" {
+  workinghours wed, thu, fri off
+}
+resource pm "Product" {
+}
+resource design "Design" {
+}
+resource dev "Engineering" {
+  resource ana "Ana R." {
+  }
+  resource ben "Ben K." {
+  }
+}
+resource qa "QA" {
+  limits { dailymax 6h }
+}
+task website "Website relaunch" {
+  start 2026-10-05
+  task discovery "Discovery" {
+    purge allocate
+    allocate pm
+    task stakeholder "Stakeholder interviews" {
+      complete 100
+      effort 3d
+    }
+    task reqs "Requirements doc" {
+      depends !stakeholder
+      effort 4d
+    }
+  }
+  task design "Design" {
+    depends !discovery.reqs
+    purge allocate
+    allocate design
+    task wires "Wireframes" {
+      effort 5d
+    }
+    task visual "Visual design" {
+      depends !wires
+      effort 8d
+    }
+  }
+  task build "Build" {
+    depends !design.wires
+    purge allocate
+    allocate dev
+    task content "Content migration" {
+      purge allocate
+      allocate dev, pm
+      effort 10d
+    }
+    task frontend "Front end" {
+      effort 15d
+    }
+    task qa "QA pass" {
+      depends !frontend
+      purge allocate
+      allocate qa
+      effort 5d
+    }
+  }
+  task milestones "Milestones" {
+    task kickoff "Kickoff" {
+      milestone
+    }
+    task design "Design sign-off" {
+      depends !kickoff, !!design.wires
+      milestone
+    }
+    task launch "Launch" {
+      depends !!build.frontend
+      milestone
+    }
+  }
+}
+textreport report "Plan" {
+  formats html
+  header '== Website relaunch =='
+  center -8<-
+    <[report id="plan"]>
+    ----
+    <[report id="resourceGraph"]>
+  ->8-
+}
+taskreport plan "" {
+  headline "Project Plan"
+  columns bsi, name, start, end, effort, complete, chart { width 20000 scale week }
+  loadunit shortauto
+  hideresource 1
+}
+resourcereport resourceGraph "" {
+  headline "Resource Allocation"
+  columns no, name, effort, weekly
+  loadunit shortauto
+  hidetask ~(isleaf() & isleaf_())
+  sorttasks plan.start.up
+}

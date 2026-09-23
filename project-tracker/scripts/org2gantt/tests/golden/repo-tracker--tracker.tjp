@@ -1,0 +1,41 @@
+project nil "Workstreams" "1.0" 2026-09-23 +280d {
+}
+shift s40 "Part time shift" {
+  workinghours wed, thu, fri off
+}
+resource team "Team" {
+}
+task workstreams "Workstreams" {
+  purge allocate
+  allocate team
+  task gantt "Gantt rendering (org2gantt)" {
+    task dockerfile "Dockerfile for org2gantt" {
+      effort 1d
+    }
+    task sync "Sync the installed skill copies" {
+      effort 1d
+    }
+  }
+}
+textreport report "Plan" {
+  formats html
+  header '== project-tracker — project tracker =='
+  center -8<-
+    <[report id="plan"]>
+    ----
+    <[report id="resourceGraph"]>
+  ->8-
+}
+taskreport plan "" {
+  headline "Project Plan"
+  columns bsi, name, start, end, effort, complete, chart { width 20000 scale week }
+  loadunit shortauto
+  hideresource 1
+}
+resourcereport resourceGraph "" {
+  headline "Resource Allocation"
+  columns no, name, effort, weekly
+  loadunit shortauto
+  hidetask ~(isleaf() & isleaf_())
+  sorttasks plan.start.up
+}

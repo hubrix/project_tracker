@@ -1,0 +1,45 @@
+#+TITLE: payments-api — project tracker
+#+TODO: TODO(t) NEXT(n) WAITING(w) BLOCKED(b) | DONE(d) DROPPED(x)
+
+* How this file works
+Read before starting.
+
+* Now
+** NEXT Ledger reconciliation job
+
+* Workstreams
+** Ledger
+   :PROPERTIES:
+   :ORDERED:  t
+   :END:
+*** DONE Schema migration
+CLOSED: [2026-09-18 Fri 10:00]
+*** NEXT Ledger reconciliation job
+    :PROPERTIES:
+    :Effort:   3d
+    :task_id:  recon
+    :END:
+*** TODO Backfill historical entries
+    :PROPERTIES:
+    :Effort:   5d
+    :END:
+*** WAITING Nightly diff alert
+Written, not run against prod data.
+** Onboarding
+Notes about the onboarding workstream.
+*** TODO Document local setup
+*** BLOCKED Staging credentials
+    :PROPERTIES:
+    :BLOCKER:  recon
+    :END:
+Waiting on infra ticket.
+*** DROPPED Old SSO flow
+** Retired workstream
+*** DONE Everything here
+CLOSED: [2026-09-01 Tue 09:00]
+
+* Backlog
+** TODO Something someday
+
+* Decisions
+** 2026-09-10 — Use Postgres

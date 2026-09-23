@@ -185,6 +185,20 @@ org-mode's own outline in Emacs, or a panel in an agent UI that watches the file
 and re-reads it whenever anyone writes — you, this agent, or a subagent it
 spawned. However you look at it, the file itself is the state; nothing about
 this skill depends on a particular viewer.
+
+To see the remaining work as a schedule, `scripts/org2gantt` renders the
+tracker as a Gantt chart and resource-loading chart through the TaskJuggler
+scheduler:
+
+```bash
+<skill-dir>/scripts/org2gantt/org2gantt --tracker project.org -o gantt-out
+```
+
+It charts the open items under `* Workstreams` and leaves the file untouched.
+Open items without an `:Effort:` get a placeholder and are listed on stderr, so
+the chart is only as honest as the efforts and `:BLOCKER:`s in the tracker.
+It needs Python, TaskJuggler (`gem install taskjuggler`) and Playwright;
+no Emacs. Options are in `scripts/org2gantt/README.md`.
 </seeing_it>
 
 <success_criteria>

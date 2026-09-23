@@ -1,0 +1,41 @@
+project nil "First headline becomes the project" "1.0" 2026-09-23 +280d {
+}
+shift s40 "Part time shift" {
+  workinghours wed, thu, fri off
+}
+task first "First headline becomes the project" {
+  task only "Only task" {
+    effort 2d
+  }
+  task two "Two words" {
+    milestone
+  }
+  task two_words "Two words" {
+    milestone
+  }
+  task _123 "123 numeric start" {
+    milestone
+  }
+}
+textreport report "Plan" {
+  formats html
+  header '== First headline becomes the project =='
+  center -8<-
+    <[report id="plan"]>
+    ----
+    <[report id="resourceGraph"]>
+  ->8-
+}
+taskreport plan "" {
+  headline "Project Plan"
+  columns bsi, name, start, end, effort, complete, chart { width 20000 scale week }
+  loadunit shortauto
+  hideresource 1
+}
+resourcereport resourceGraph "" {
+  headline "Resource Allocation"
+  columns no, name, effort, weekly
+  loadunit shortauto
+  hidetask ~(isleaf() & isleaf_())
+  sorttasks plan.start.up
+}

@@ -1,0 +1,55 @@
+project nil "Workstreams" "1.0" 2026-09-23 +280d {
+}
+shift s40 "Part time shift" {
+  workinghours wed, thu, fri off
+}
+resource team "Team" {
+}
+task workstreams "Workstreams" {
+  purge allocate
+  allocate team
+  task ledger "Ledger" {
+    task recon "Ledger reconciliation job" {
+      effort 3d
+    }
+    task backfill "Backfill historical entries" {
+      depends !recon
+      effort 5d
+    }
+    task nightly "Nightly diff alert" {
+      depends !backfill
+      effort 1d
+    }
+  }
+  task onboarding "Onboarding" {
+    task document "Document local setup" {
+      effort 1d
+    }
+    task staging "Staging credentials" {
+      depends !!ledger.recon
+      effort 1d
+    }
+  }
+}
+textreport report "Plan" {
+  formats html
+  header '== payments-api — project tracker =='
+  center -8<-
+    <[report id="plan"]>
+    ----
+    <[report id="resourceGraph"]>
+  ->8-
+}
+taskreport plan "" {
+  headline "Project Plan"
+  columns bsi, name, start, end, effort, complete, chart { width 20000 scale week }
+  loadunit shortauto
+  hideresource 1
+}
+resourcereport resourceGraph "" {
+  headline "Resource Allocation"
+  columns no, name, effort, weekly
+  loadunit shortauto
+  hidetask ~(isleaf() & isleaf_())
+  sorttasks plan.start.up
+}

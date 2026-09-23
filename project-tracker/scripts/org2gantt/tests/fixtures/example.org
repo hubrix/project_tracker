@@ -1,0 +1,92 @@
+#+TITLE: Website relaunch
+#+TODO: TODO NEXT WAITING BLOCKED | DONE DROPPED
+
+* Website relaunch                                      :taskjuggler_project:
+  :PROPERTIES:
+  :start:    2026-10-05
+  :END:
+** Discovery
+   :PROPERTIES:
+   :ORDERED:  t
+   :allocate: pm
+   :END:
+*** DONE Stakeholder interviews
+    :PROPERTIES:
+    :Effort:   3d
+    :END:
+*** NEXT Requirements doc
+    :PROPERTIES:
+    :Effort:   4d
+    :task_id:  reqs
+    :END:
+** Design
+   :PROPERTIES:
+   :allocate: design
+   :BLOCKER:  reqs
+   :END:
+*** Wireframes
+    :PROPERTIES:
+    :Effort:   5d
+    :task_id:  wires
+    :END:
+*** Visual design
+    :PROPERTIES:
+    :Effort:   8d
+    :BLOCKER:  previous-sibling
+    :END:
+** Build
+   :PROPERTIES:
+   :allocate: dev
+   :BLOCKER:  wires
+   :END:
+*** Content migration
+    :PROPERTIES:
+    :Effort:   10d
+    :allocate: dev, pm
+    :END:
+*** Front end
+    :PROPERTIES:
+    :Effort:   15d
+    :task_id:  frontend
+    :END:
+*** QA pass
+    :PROPERTIES:
+    :Effort:   5d
+    :BLOCKER:  frontend
+    :allocate: qa
+    :END:
+** Milestones
+*** Kickoff
+    :PROPERTIES:
+    :task_id:  kickoff
+    :END:
+*** Design sign-off
+    :PROPERTIES:
+    :BLOCKER:  previous-sibling
+    :depends:  wires
+    :END:
+*** Launch
+    :PROPERTIES:
+    :BLOCKER:  frontend
+    :END:
+
+* Team                                                 :taskjuggler_resource:
+** Product
+   :PROPERTIES:
+   :resource_id: pm
+   :END:
+** Design
+   :PROPERTIES:
+   :resource_id: design
+   :END:
+** Engineering
+   :PROPERTIES:
+   :resource_id: dev
+   :END:
+*** Ana R.
+*** Ben K.
+** QA
+   :PROPERTIES:
+   :resource_id: qa
+   :limits:   { dailymax 6h }
+   :END:

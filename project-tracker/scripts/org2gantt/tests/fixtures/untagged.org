@@ -1,0 +1,8 @@
+* First headline becomes the project
+** Only task
+   :PROPERTIES:
+   :Effort:   2d
+   :END:
+** Two words
+** Two words
+** 123 numeric start
