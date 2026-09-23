@@ -54,6 +54,25 @@ terminal, merges like text.
 that has none. You do not need Emacs, or to like org-mode: it is a text file with
 a convention for headings.
 
+## Seeing it as a Gantt chart
+
+`project-tracker/scripts/org2gantt` renders a tracker (or any org file) as a
+Gantt chart and resource-loading chart via the
+[TaskJuggler](https://taskjuggler.org) scheduler: org → `.tjp` → HTML → PNG.
+
+```sh
+sh project-tracker/scripts/gantt          # or, in an agent: /project-tracker gantt
+```
+
+Tracker mode charts the open items under `* Workstreams`, prunes closed ones,
+and flags any item missing an `:Effort:`. Add `:Effort:`, `:BLOCKER:` and
+`:ORDERED:` properties to the tracker for a real schedule. The org conversion
+is plain Python (no Emacs). Scheduling and images need TaskJuggler and
+Playwright; `sh project-tracker/scripts/org2gantt/install-deps` installs both
+for your user (Ruby 3+ and Python 3.8+, no sudo, about 540 MB), or `gantt` falls
+back to an image built from the bundled Dockerfile. See
+[its README](project-tracker/scripts/org2gantt/README.md).
+
 ## Install
 
 Copy the `project-tracker` directory into whichever skills root your agent reads:

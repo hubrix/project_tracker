@@ -1,0 +1,131 @@
+project nil "Big Plan \"quoted\"" "2.1" 2026-10-05 +280d {
+  timezone "America/New_York"
+  dailyworkinghours 8
+}
+shift s40 "Part time shift" {
+  workinghours wed, thu, fri off
+}
+account costs "Costs" {
+}
+account revenue "Revenue" {
+}
+resource people "People" {
+  resource alice "Alice Smith" {
+    efficiency 0.8
+  }
+  resource bob "Bob \"the builder\" Jones" {
+    vacation 2026-11-20 - 2026-11-27
+  }
+  resource alice_cooper "Alice Cooper" {
+  }
+}
+resource _3rd "3rd party" {
+}
+task big "Big Plan \"quoted\"" {
+  start 2026-10-05
+  task design "Design phase" {
+    purge allocate
+    allocate alice
+    task design "Design the thing" {
+      effort 3d
+      priority 1000
+      note "single line note"
+    }
+    task design_the "Design the other thing" {
+      depends !design
+      effort 2d
+    }
+    task design_the_thing "Design the thing again" {
+      depends !design_the
+      effort 1d
+    }
+    task design_ "Design" {
+      depends !design_the_thing
+      effort 6d
+    }
+  }
+  task _2nd "2nd phase: Build & ship" {
+    task build "Build ünïcödé module" {
+      depends !!design.design {gapduration 2d}, !design {gapduration 2d}
+      purge allocate
+      allocate bob
+      effort 4d
+      priority 500
+    }
+    task integrate "Integrate" {
+      depends !build
+      purge allocate
+      allocate alice, bob
+      priority 750
+      start 2026-11-02
+      end 2026-12-01
+    }
+    task design "Shipped part" {
+      complete 100
+      effort 1d
+    }
+    task dropped "Dropped part" {
+      complete 100
+      milestone
+    }
+    task duration "Duration task" {
+      complete 40
+      duration 5d
+      limits { dailymax 4h }
+    }
+    task period "Period task" {
+      period 2026-11-01 - 2026-11-05
+    }
+    task start "Start end task" {
+      start 2026-11-10
+      end 2026-11-12
+    }
+    task explicit "Explicit milestone" {
+      effort 1d
+      milestone
+    }
+    task archived "Archived stuff" {
+      milestone
+    }
+    task plus "Plus property" {
+      purge allocate
+      allocate alice
+      effort 2d
+    }
+  }
+  task release "Release" {
+    task release "Release" {
+      milestone
+    }
+    task final "Final gate" {
+      depends !!design.design, !!_2nd.design
+      milestone
+    }
+    task uses "Uses ID" {
+      depends !final
+      milestone
+    }
+  }
+}
+textreport report "Plan" {
+  formats html
+  header '== Big Plan \"quoted\" =='
+  center -8<-
+    <[report id="plan"]>
+    ----
+    <[report id="resourceGraph"]>
+  ->8-
+}
+taskreport plan "" {
+  headline "Project Plan"
+  columns bsi, name, start, end, effort, complete, chart { width 20000 scale week }
+  loadunit shortauto
+  hideresource 1
+}
+resourcereport resourceGraph "" {
+  headline "Resource Allocation"
+  columns no, name, effort, weekly
+  loadunit shortauto
+  hidetask ~(isleaf() & isleaf_())
+  sorttasks plan.start.up
+}

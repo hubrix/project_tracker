@@ -1,6 +1,7 @@
 ---
 name: project-tracker
-description: Keep a repository's next steps in a `project.org` org-mode tracker across sessions. Use when starting work in a repo with a tracker, before every commit (require a meaningful staged tracker update and pass the commit gate), when finishing a step, discovering follow-ups, or settling decisions, and when adopting a tracker for work that spans sessions or branches.
+description: Keep a repository's next steps in a `project.org` org-mode tracker across sessions. Use when starting work in a repo with a tracker, before every commit (require a meaningful staged tracker update and pass the commit gate), when finishing a step, discovering follow-ups, or settling decisions, and when adopting a tracker for work that spans sessions or branches. Invoked with the argument `gantt` (`/project-tracker gantt [options]`), render the tracker's open work as a Gantt chart.
+compatibility: The tracker needs only sh and git. The gantt command also needs Ruby 3+ and Python 3.8+; scripts/org2gantt/install-deps installs TaskJuggler and Playwright for the user without sudo, or Docker can run a locally built image.
 ---
 
 <objective>
@@ -185,7 +186,71 @@ org-mode's own outline in Emacs, or a panel in an agent UI that watches the file
 and re-reads it whenever anyone writes — you, this agent, or a subagent it
 spawned. However you look at it, the file itself is the state; nothing about
 this skill depends on a particular viewer.
+
+To see the remaining work as a schedule, render it as a Gantt chart with the
+`gantt` command below. It charts the open items under `* Workstreams` through
+the TaskJuggler scheduler and leaves the file untouched. Open items without an
+`:Effort:` get a placeholder and are listed on stderr, so the chart is only as
+honest as the efforts and `:BLOCKER:`s in the tracker.
 </seeing_it>
+
+<command name="gantt">
+When this skill is invoked with the argument `gantt` (for example
+`/project-tracker gantt` or `/project-tracker gantt --timescale day`), or asked
+for a Gantt chart of the tracker, run from the repository:
+
+```bash
+sh <skill-dir>/scripts/gantt [options]
+```
+
+Pass any words after `gantt` through as options; they are
+`scripts/org2gantt/README.md`'s flags (`--timescale hour|day|week|month|quarter`,
+`--pdf`, `-o DIR`, `--start YYYY-MM-DD`, `--include-done`, `--root HEADING`,
+`--default-effort E`). The script finds `project.org` at the repository root,
+writes to `gantt-out/` by default, and prints the paths of `plan.png`,
+`resources.png` and, with `--pdf`, `plan.pdf`.
+
+Then:
+1. Show the user `plan.png` (and `resources.png` if they asked about load).
+2. Relay every `placeholder Effort` line from stderr: those items have no
+   `:Effort:`, so their bars are a guess. Offer to add real efforts,
+   `:BLOCKER:`s or `:ORDERED:` to the tracker; do not add them unasked.
+3. Say that Completion is elapsed-time %, not progress, if it shows on
+   unstarted items.
+4. Leave `gantt-out/` out of commits: it is a rendering, not tracker state.
+   If it would show up as untracked, offer to add it to `.gitignore`.
+
+Tracker mode schedules in agent time: a 24/7 calendar, a 1h placeholder, and
+an hour-wide chart; the project heading's own `:workinghours:`,
+`:dailyworkinghours:` or `:timingresolution:` replace that calendar. If the
+chart is too wide to read, rerun with `--timescale day`.
+
+### Dependencies
+The chart needs TaskJuggler (a Ruby gem) and Playwright with its Chromium
+build (Python), pinned in `scripts/org2gantt/Gemfile` and `requirements.txt`.
+No Emacs, and Docker is optional. The script uses, in order:
+1. what `install-deps` installed,
+2. `tj3` and Playwright already on the system,
+3. a local Docker image named `org2gantt`.
+
+If none is present, it exits non-zero and says so. Then ask the user once
+whether to install, and on a yes run:
+
+```bash
+sh <skill-dir>/scripts/org2gantt/install-deps
+```
+
+It needs Ruby 3+ and Python 3.8+ but no sudo. It installs into
+`~/.local/share/org2gantt` (`$ORG2GANTT_HOME` overrides; delete it to
+uninstall) plus Playwright's browser cache, downloads about 540 MB, is safe to
+rerun, and ends with a test render. If that render fails for missing system
+libraries (common on a bare Linux), it prints a `sudo ... playwright
+install-deps chromium` command. Give it to the user to run; do not run sudo
+yourself. Then rerun `install-deps` and the chart.
+
+With Docker instead, `docker build -t org2gantt <skill-dir>/scripts/org2gantt`.
+The image copies the renderer in, so rebuild it after updating the skill.
+</command>
 
 <success_criteria>
 - The tracker was read before the work started, and the work came from `NEXT`.

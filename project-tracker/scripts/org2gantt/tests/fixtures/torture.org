@@ -1,0 +1,122 @@
+#+TODO: TODO NEXT WAIT(w@/!) | DONE(d) CANCELED
+#+PRIORITIES: A E C
+Preamble text before any headline.
+* Notes before project
+Some notes; not the project because another headline is tagged.
+* Big Plan "quoted"                                       :taskjuggler_project:
+  SCHEDULED: <2026-10-05 Mon>
+  :PROPERTIES:
+  :VERSION:  2.1
+  :timezone: "America/New_York"
+  :dailyworkinghours: 8
+  :END:
+** Design phase
+   :PROPERTIES:
+   :ORDERED:  t
+   :allocate: alice
+   :END:
+*** TODO [#A] Design the thing
+    :PROPERTIES:
+    :Effort:   3d
+    :task_id:  design
+    :note:     "single line note"
+    :END:
+*** Design the other thing
+    :PROPERTIES:
+    :Effort:   2d
+    :END:
+*** Design the thing again
+    :PROPERTIES:
+    :Effort:   1d
+    :END:
+*** Design
+    :PROPERTIES:
+    :Effort:   1d
+    :Effort:   6d
+    :END:
+** 2nd phase: Build & ship
+*** NEXT [#C] Build ünïcödé module
+    :PROPERTIES:
+    :Effort:   4d
+    :BLOCKER:  design {gapduration 2d}
+    :allocate: bob
+    :END:
+*** WAIT [#B] Integrate
+    DEADLINE: <2026-12-01 Tue> SCHEDULED: <2026-11-02 Mon>
+    :PROPERTIES:
+    :allocate: alice, bob
+    :depends:  previous-sibling
+    :END:
+*** DONE Shipped part
+    :PROPERTIES:
+    :Effort:   1d
+    :task_id:  design
+    :END:
+*** CANCELED Dropped part
+*** Duration task
+    :PROPERTIES:
+    :duration: 5d
+    :complete: 40
+    :limits:   { dailymax 4h }
+    :END:
+*** Period task
+    :PROPERTIES:
+    :period:   2026-11-01 - 2026-11-05
+    :END:
+*** Start end task
+    :PROPERTIES:
+    :start:    2026-11-10
+    :end:      2026-11-12
+    :END:
+*** Explicit milestone
+    :PROPERTIES:
+    :milestone: t
+    :Effort:   1d
+    :END:
+*** Hidden                                                         :noexport:
+    :PROPERTIES:
+    :Effort:   9d
+    :END:
+*** COMMENT Commented out
+*** Archived stuff                                                 :ARCHIVE:
+**** Child of archived
+*** Plus property
+    :PROPERTIES:
+    :allocate: alice
+    :allocate+: bob
+    :Effort:   2d
+    :END:
+** Release
+*** Release
+    :PROPERTIES:
+    :BLOCKER:  previous-sibling
+    :END:
+*** Final gate
+    :PROPERTIES:
+    :BLOCKER:  design integrate_unused
+    :ID:       final-gate-id
+    :END:
+*** Uses ID
+    :PROPERTIES:
+    :BLOCKER:  final-gate-id
+    :END:
+* Resources                                              :taskjuggler_resource:
+** People
+*** Alice Smith
+    :PROPERTIES:
+    :resource_id: alice
+    :efficiency: 0.8
+    :END:
+*** Bob "the builder" Jones
+    :PROPERTIES:
+    :resource_id: bob
+    :vacation: 2026-11-20 - 2026-11-27
+    :END:
+*** Alice Cooper
+** 3rd party
+* Money                                                   :taskjuggler_account:
+** Costs
+   :PROPERTIES:
+   :account_id: costs
+   :END:
+** Revenue

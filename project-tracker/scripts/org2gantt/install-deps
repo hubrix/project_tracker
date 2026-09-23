@@ -1,0 +1,46 @@
+#!/bin/sh
+# Install org2gantt's dependencies for this user, without sudo: TaskJuggler
+# (Gemfile) and Playwright (requirements.txt) into one directory, plus
+# Playwright's Chromium in its usual cache. org2gantt and ../gantt find them.
+#   ${ORG2GANTT_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/org2gantt}
+# Rerun to repair or upgrade; delete that directory to uninstall.
+set -eu
+
+fail() {
+   printf 'install-deps: %s\n' "$1" >&2
+   exit 1
+}
+
+here=$(cd "$(dirname "$0")" && pwd)
+home=${ORG2GANTT_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/org2gantt}
+
+command -v gem >/dev/null 2>&1 ||
+   fail 'needs Ruby 3+ with gem (e.g. apt install ruby, brew install ruby)'
+command -v python3 >/dev/null 2>&1 ||
+   fail 'needs Python 3.8+ (e.g. apt install python3, brew install python)'
+mkdir -p "$home"
+
+# Not `gem install --file`: that re-resolves Ruby's bundled gems to their
+# latest versions, which need a C compiler to build.
+tj=$(sed -n 's/^gem "taskjuggler", "\(.*\)"$/\1/p' "$here/Gemfile")
+[ -n "$tj" ] || fail "no taskjuggler version in $here/Gemfile"
+printf 'TaskJuggler %s -> %s/gems\n' "$tj" "$home"
+GEM_HOME=$home/gems gem install --no-document taskjuggler -v "$tj" >/dev/null ||
+   fail 'gem install failed (output above)'
+
+printf 'Playwright -> %s/venv\n' "$home"
+[ -x "$home/venv/bin/python" ] || python3 -m venv "$home/venv" ||
+   fail 'python3 -m venv failed; on Debian/Ubuntu: apt install python3-venv'
+"$home/venv/bin/python" -m pip install -q --disable-pip-version-check -r "$here/requirements.txt" ||
+   fail 'pip install failed (output above)'
+printf 'Chromium -> %s\n' "${PLAYWRIGHT_BROWSERS_PATH:-Playwright cache}"
+"$home/venv/bin/python" -m playwright install --only-shell chromium ||
+   fail 'playwright install --only-shell chromium failed (output above)'
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+ORG2GANTT_HOME=$home "$home/venv/bin/python" "$here/org2gantt" "$here/example.org" -o "$tmp" >/dev/null 2>"$tmp/err" || {
+   cat "$tmp/err" >&2
+   fail "installed, but a test render failed; on Linux, Chromium may need system libraries: sudo $home/venv/bin/python -m playwright install-deps chromium"
+}
+printf 'OK: test render of example.org worked\n'

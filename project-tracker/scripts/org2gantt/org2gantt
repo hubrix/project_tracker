@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""org2gantt: Org file (or project.org tracker) -> TaskJuggler -> Gantt / resource PNGs.
+
+Pipeline:
+  1. orgtj (this directory, stdlib only)  : .org -> .tjp
+  2. tj3 (TaskJuggler 3)                  : schedule + HTML reports
+  3. headless Chromium (Playwright)       : crop each report table -> PNG (optionally PDF)
+
+Usage:
+  org2gantt --tracker project.org             # a project-tracker file, as-is
+  org2gantt plan.org -o build --timescale day --pdf
+  org2gantt plan.org --tjp-only               # just the .tjp (no tj3 or Chromium needed)
+  org2gantt plan.tjp                          # skip conversion
+"""
+import argparse, os, pathlib, shutil, subprocess, sys
+
+HERE = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import orgtj  # noqa: E402
+
+# Where install-deps puts TaskJuggler (gems/) and Playwright (venv/).
+DEPS = pathlib.Path(os.environ.get("ORG2GANTT_HOME")
+                    or pathlib.Path(os.environ.get("XDG_DATA_HOME") or pathlib.Path.home() / ".local/share")
+                    / "org2gantt")
+INSTALL = f"sh {HERE / 'install-deps'}"
+
+
+def use_installed_deps():
+    """Prefer install-deps' tj3 and Python over whatever is on PATH."""
+    gems = DEPS / "gems"
+    if (gems / "bin" / "tj3").exists():
+        os.environ["GEM_HOME"] = str(gems)
+        os.environ["PATH"] = str(gems / "bin") + os.pathsep + os.environ.get("PATH", "")
+    py = DEPS / "venv" / "bin" / "python"
+    if py.exists() and pathlib.Path(sys.prefix).resolve() != (DEPS / "venv").resolve():
+        os.execv(str(py), [str(py), str(HERE / "org2gantt"), *sys.argv[1:]])
+
+
+def fail(msg):
+    sys.exit(f"org2gantt: {msg}")
+
+
+def org_to_tjp(src: pathlib.Path, out: pathlib.Path, a) -> pathlib.Path:
+    doc = orgtj.parse(src.read_text(encoding="utf-8"), src.name)
+    try:
+        if a.tracker:
+            for title in orgtj.prepare_tracker(doc, a.root, a.default_effort, a.include_done):
+                print(f"org2gantt: placeholder Effort {a.default_effort} -> {title}", file=sys.stderr)
+        text = orgtj.to_tjp(doc, today=a.start, duration=a.duration,
+                            reports=orgtj.default_reports(a.timescale, a.width))
+    except orgtj.OrgError as e:
+        fail(str(e))
+    tjp = out / (src.stem + ".tjp")
+    tjp.write_text(text, encoding="utf-8")
+    return tjp
+
+
+def tjp_to_html(tjp: pathlib.Path, out: pathlib.Path) -> pathlib.Path:
+    if not shutil.which("tj3"):
+        fail(f"tj3 not found: run {INSTALL} (or gem install taskjuggler, or use --tjp-only)")
+    r = subprocess.run(["tj3", "--no-color", "--silent", "-o", str(out), str(tjp)],
+                       capture_output=True, text=True)
+    for line in (r.stdout + r.stderr).splitlines():
+        if "Warning" in line or "Error" in line:
+            print("tj3:", line, file=sys.stderr)
+    if r.returncode != 0:
+        fail("tj3 could not schedule the project (errors above)")
+    return out / "Plan.html"
+
+
+def html_to_png(html: pathlib.Path, out: pathlib.Path, a):
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        fail(f"playwright not found: run {INSTALL} (or pip install playwright && playwright install chromium)")
+    names = ["plan", "resources"]
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        pg = b.new_page(viewport={"width": 8000, "height": 1000}, device_scale_factor=a.scale)
+        pg.goto(html.resolve().as_uri())
+        pg.wait_for_load_state("networkidle")
+        tables = pg.locator("table.tj_table_frame")
+        for i in range(tables.count()):
+            f = out / f"{names[i] if i < len(names) else f'report{i}'}.png"
+            tables.nth(i).screenshot(path=str(f))
+            print(f)
+        if a.pdf:
+            pg.pdf(path=str(out / "plan.pdf"), landscape=True, print_background=True,
+                   width=f"{pg.evaluate('document.body.scrollWidth') + 40}px")
+            print(out / "plan.pdf")
+        b.close()
+
+
+def main():
+    use_installed_deps()
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("input", type=pathlib.Path, help=".org or .tjp file")
+    ap.add_argument("-o", "--out", type=pathlib.Path, default=pathlib.Path("gantt-out"))
+    ap.add_argument("--timescale", choices=list(orgtj.SCALES),
+                    help="chart granularity; finer = wider image (default hour with --tracker, else week)")
+    ap.add_argument("--start", help="plan start YYYY-MM-DD if the project headline has none (default today)")
+    ap.add_argument("--duration", type=int, default=365, help="project length in days if no end is set")
+    ap.add_argument("--scale", type=float, default=2, help="PNG pixel ratio (2 = retina)")
+    ap.add_argument("--pdf", action="store_true", help="also write plan.pdf")
+    ap.add_argument("--max-width", dest="width", type=int, default=20000,
+                    help="cap on Gantt column width in px; chart otherwise sizes to task span x timescale")
+    ap.add_argument("--tjp-only", action="store_true", help="stop after writing the .tjp")
+    t = ap.add_argument_group("project.org trackers")
+    t.add_argument("--tracker", action="store_true",
+                   help="input is a project-tracker file: root it at --root, prune closed items, "
+                        "add a Team resource and placeholder efforts if missing")
+    t.add_argument("--root", default="Workstreams", help="top-level heading to chart (default Workstreams)")
+    t.add_argument("--default-effort", default="1h", help="Effort for open leaves that have none (default 1h)")
+    t.add_argument("--include-done", action="store_true", help="keep DONE/DROPPED items in the chart")
+    a = ap.parse_args()
+    a.timescale = a.timescale or ("hour" if a.tracker else "week")
+
+    if not a.input.is_file():
+        fail(f"no such file: {a.input}")
+    a.out.mkdir(parents=True, exist_ok=True)
+    if a.input.suffix == ".tjp":
+        tjp = a.out / a.input.name
+        if tjp.resolve() != a.input.resolve():
+            shutil.copy(a.input, tjp)
+    else:
+        tjp = org_to_tjp(a.input, a.out, a)
+    print(tjp)
+    if a.tjp_only:
+        return
+    html = tjp_to_html(tjp, a.out.resolve())
+    print(html)
+    html_to_png(html, a.out, a)
+
+
+if __name__ == "__main__":
+    main()

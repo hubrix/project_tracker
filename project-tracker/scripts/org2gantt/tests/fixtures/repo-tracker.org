@@ -1,0 +1,96 @@
+#+TITLE: project-tracker — project tracker
+#+STARTUP: overview
+#+TODO: TODO(t) NEXT(n) WAITING(w) BLOCKED(b) | DONE(d) DROPPED(x)
+#+TAGS: docs(c) release(r) gantt(g)
+
+* How this file works
+Read this file before starting work. Keep statuses and next steps accurate, and
+commit meaningful tracker updates with the work they describe. Follow the commit
+gate in [[file:AGENTS.md][AGENTS.md]]. Detailed skill instructions live in
+[[file:project-tracker/SKILL.md][SKILL.md]].
+
+* Now
+** NEXT Build and run the org2gantt Docker image                     :gantt:
+See the WAITING item under Gantt rendering.
+
+* Workstreams
+** Skill maintenance
+*** DONE Require a tracker update before every commit
+CLOSED: [2026-09-20 Sun 11:09]
+Added mandatory content review, a read-only Git state check, and a post-commit
+cleanliness check. Updated the README, adoption instructions, and starter tracker.
+Verified: skill validation, shell syntax, and 15 temporary-repository scenarios
+covering missing, empty, unchanged, partially staged, conflicted, and valid
+trackers; nested invocation; unrelated changes; and cleanliness after commit.
+
+*** DONE Update the installed GSD skill
+CLOSED: [2026-09-20 Sun 11:09]
+Copied the updated skill, starter tracker, and gate script to the installed GSD
+skill directory. Verified an exact directory match, skill validation, and shell
+syntax.
+
+*** DONE Adopt the tracker and persistent commit rule in this repository
+CLOSED: [2026-09-20 Sun 11:09]
+Recorded the completed work here and added AGENTS.md with the local gate command.
+Verified the entries against this session's changes and validation results.
+
+** Gantt rendering (org2gantt)                                        :gantt:
+Detail: [[file:project-tracker/scripts/org2gantt/README.md][org2gantt README]].
+*** DONE Add org2gantt: org / project.org -> TaskJuggler -> Gantt PNG
+CLOSED: [2026-09-23 Wed 14:00]
+Added =project-tracker/scripts/org2gantt/=: the CLI, =orgtj.py= (stdlib org ->
+.tjp converter and tracker mode), examples, README, and =tests/= (goldens,
+fixtures, =run_tests.py=), plus pointers in SKILL.md and README. Verified on
+TaskJuggler 3.8.4 and Playwright Chromium with every Emacs binary removed
+from PATH: =example.org= renders plan/resources PNG + PDF; =.tjp= input and
+=--tjp-only= work; =--tracker= prunes closed items and notes, chains =ORDERED=,
+keeps cross-workstream =BLOCKER=s, adds the Team resource, lists placeholder
+efforts on stderr, and leaves the source unchanged; bad =--root= and all-closed
+trackers fail clearly. =tests/run_tests.py --tj3= passes (7 golden cases, 4
+dependency cases, 3 error paths) and fails when either dependency fix or the
+noexport filter is reverted. Skill validation passes.
+*** WAITING Dockerfile for org2gantt
+Written, never built: no container runtime in the authoring environment.
+Untested: =docker build=, Playwright's =--with-deps= on =ruby:3.3-slim=, and a
+=docker run= against a mounted tracker. The image has no Emacs.
+*** TODO Sync the installed skill copies
+The installed GSD skill (and any =~/.claude/skills= copy) predates org2gantt.
+Copy =project-tracker/= again and verify an exact directory match.
+
+* Backlog
+** TODO Regenerate the Gantt PNG in CI when project.org changes      :gantt:
+A GitHub Action using the Dockerfile, committing or uploading =plan.png=.
+** TODO Map tracker states onto the Completion column                :gantt:
+TaskJuggler shows elapsed-time % for unfinished tasks, so a NEXT item that
+has not started can read 16%. Consider =complete 0= for TODO/NEXT/BLOCKED.
+** TODO SVG output                                                   :gantt:
+PNG is a screenshot of TaskJuggler's HTML; SVG needs parsing that HTML or
+another renderer.
+
+* Decisions
+** 2026-09-20 — Require both content review and the Git state check
+The script can verify staging and cleanliness; the agent must verify meaningful
+progress, truthful statuses, and captured follow-ups. The skill requires the
+workflow gate and does not automatically install a Git hook.
+
+** 2026-09-23 — org2gantt charts only open work under Workstreams
+=Now= repeats Workstreams items and =Backlog=/=Decisions= are not scheduled
+work. Closed items are pruned by default because TaskJuggler would schedule
+them into the future from today; =--include-done= keeps them.
+
+** 2026-09-23 — Missing efforts get a loud placeholder, not a guess
+Trackers rarely carry =:Effort:=. Refusing to render would make the tool
+useless on real trackers; a silent default would make the chart lie. Each
+placeholder is printed to stderr.
+
+** 2026-09-23 — org2gantt does not depend on Emacs
+The first version exported through =emacs --batch= and a vendored
+ox-taskjuggler. Rejected: Emacs is a heavy install for parsing an outline, and
+the vendored GPL-3.0 Lisp would have split this MIT repository's licensing.
+=orgtj.py= reimplements the exporter's rules in standard-library Python. It was
+checked byte for byte against Emacs + ox-taskjuggler =e682a15= in a scratch
+environment (7 fixtures, 220 random files, plain and tracker mode); the goldens
+in =tests/= came from that run, so the tests do not need Emacs. orgtj fixes two
+upstream dependency-parsing bugs: =BLOCKER= plus =depends= on one task, and
+comma lists without spaces. Both are documented and tested. The report template
+and example projects are original, not copied from the exporter or worg.

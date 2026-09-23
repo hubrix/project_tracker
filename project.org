@@ -1,7 +1,7 @@
 #+TITLE: project-tracker — project tracker
 #+STARTUP: overview
 #+TODO: TODO(t) NEXT(n) WAITING(w) BLOCKED(b) | DONE(d) DROPPED(x)
-#+TAGS: docs(c) release(r)
+#+TAGS: docs(c) release(r) gantt(g)
 
 * How this file works
 Read this file before starting work. Keep statuses and next steps accurate, and
@@ -10,7 +10,8 @@ gate in [[file:AGENTS.md][AGENTS.md]]. Detailed skill instructions live in
 [[file:project-tracker/SKILL.md][SKILL.md]].
 
 * Now
-No open implementation work.
+** NEXT Sync the installed skill copies                              :gantt:
+See the TODO under Gantt rendering.
 
 * Workstreams
 ** Skill maintenance
@@ -33,11 +34,148 @@ CLOSED: [2026-09-20 Sun 11:09]
 Recorded the completed work here and added AGENTS.md with the local gate command.
 Verified the entries against this session's changes and validation results.
 
+** Gantt rendering (org2gantt)                                        :gantt:
+Detail: [[file:project-tracker/scripts/org2gantt/README.md][org2gantt README]].
+*** DONE Add org2gantt: org / project.org -> TaskJuggler -> Gantt PNG
+CLOSED: [2026-09-23 Wed 14:00]
+Added =project-tracker/scripts/org2gantt/=: the CLI, =orgtj.py= (stdlib org ->
+.tjp converter and tracker mode), examples, README, and =tests/= (goldens,
+fixtures, =run_tests.py=), plus pointers in SKILL.md and README. Verified on
+TaskJuggler 3.8.4 and Playwright Chromium with every Emacs binary removed
+from PATH: =example.org= renders plan/resources PNG + PDF; =.tjp= input and
+=--tjp-only= work; =--tracker= prunes closed items and notes, chains =ORDERED=,
+keeps cross-workstream =BLOCKER=s, adds the Team resource, lists placeholder
+efforts on stderr, and leaves the source unchanged; bad =--root= and all-closed
+trackers fail clearly. =tests/run_tests.py --tj3= passes (7 golden cases, 4
+dependency cases, 3 error paths) and fails when either dependency fix or the
+noexport filter is reverted. Skill validation passes.
+*** DONE Dockerfile for org2gantt
+CLOSED: [2026-09-23 Wed 15:26]
+Built with Docker 29.3.1 and run against a mounted copy of this =project.org=
+with =--network none=: =--tracker --pdf= wrote plan/resources PNG + PDF, the
+=.tjp= matched a non-Docker run byte for byte, and the source was unchanged.
+The image (2.09 GB) has tj3 3.8.4 and no Emacs. The build environment's
+egress proxy needed its CA copied in and HTTPS apt sources; those were added
+in a scratch copy only, and the committed Dockerfile's steps ran unchanged.
+Same session: =tests/run_tests.py --tj3= passes, and the local pipeline
+(=example.org= PNG + PDF, =.tjp= input, =--tracker=, bad =--root=) works with
+TaskJuggler 3.8.4 and Playwright 1.56 Chromium.
+*** DONE Agent-time defaults in tracker mode
+CLOSED: [2026-09-23 Wed 16:10]
+=--tracker= now adds a 24/7 calendar (=timingresolution 15min=, =workinghours
+mon - sun 0:00 - 24:00=, =dailyworkinghours 24=) unless the project heading
+sets any of those, defaults =--default-effort= to =1h= and =--timescale= to
+the new =hour= scale. Plain mode is unchanged: =example.org= gives the same
+=.tjp= as before. The Emacs tracker goldens still pass with both defaults
+switched off; a new hand-reviewed golden and two calendar unit cases cover
+the defaults. =run_tests.py --tj3= passes, and =example-tracker.org= renders
+3d as 72 continuous hours across the weekend, with 1h placeholders.
+*** DONE Convert org H:MM Effort values
+CLOSED: [2026-09-23 Wed 16:10]
+=:Effort: 1:30= used to reach tj3 verbatim, which read it as a time of day and
+failed (=Unexpected token '5400'=). orgtj now writes =effort 90min=
+(H:MM and H:MM:SS, seconds rounded half up); unit forms like =3d= pass through.
+Five unit cases pass. Documented with the other deliberate differences.
+*** DONE Add the =gantt= skill command
+CLOSED: [2026-09-23 Wed 16:08]
+=/project-tracker gantt [options]= runs the new =scripts/gantt=, which finds
+the repository's =project.org=, runs =org2gantt --tracker= locally (tj3 and
+Playwright) or through a local =org2gantt= image, and prints the image paths.
+SKILL.md's =<command name="gantt">= says to show the chart, relay placeholder
+efforts, and keep =gantt-out/= (now in =.gitignore=) out of commits. Verified:
+local run from a subdirectory; =-o DIR=, =--out=DIR=, =--timescale day --pdf=;
+Docker fallback with tj3 off PATH; clear failures with no =project.org=, a bad
+option, or neither tool route. Skill validation passes.
+The Docker test showed the image ran as root and Chromium was unreachable for
+any other user; the Dockerfile now sets =PLAYWRIGHT_BROWSERS_PATH= and =HOME=.
+Rebuilt and run with =--user 1000:1000 --network none=: PNG + PDF owned by
+uid 1000, with the current 1h placeholders.
+*** DONE Make TaskJuggler and Playwright installable
+CLOSED: [2026-09-23 Wed 16:35]
+Pinned in =scripts/org2gantt/Gemfile= (taskjuggler ~> 3.8) and
+=requirements.txt= (playwright==1.56.0). New =install-deps= installs them for
+the user without sudo into =~/.local/share/org2gantt= (=$ORG2GANTT_HOME=),
+plus Chromium's headless shell, then runs a test render. =org2gantt= and
+=gantt= use that install before PATH, then Docker; the Dockerfile uses the
+same pins. SKILL.md: ask once before installing; hand any =sudo= step to the
+user. Verified:
+- Fresh HOME with no tj3 on PATH: 82 s, about 540 MB; a rerun is a no-op;
+  =gantt --pdf= and a direct =org2gantt= both render.
+- Bare =ruby:3.3-slim= as a non-root user, with no C compiler: the first run
+  stops with the exact =sudo ... playwright install-deps chromium= command;
+  after running it as root, the rerun and =gantt= pass.
+- Rebuilt image: pinned versions, 1.55 GB (was 2.09); runs with =--user
+  1000:1000 --network none=.
+- Missing Ruby fails clearly. =run_tests.py --tj3= and skill validation pass.
+The slim test caught a bug: =gem install --file Gemfile= re-resolved Ruby's
+bundled gems (io-console, rbs, prism) and needed a compiler. The script and
+the Dockerfile now install =taskjuggler -v <Gemfile constraint>=.
+*** NEXT Sync the installed skill copies
+The installed GSD skill (and any =~/.claude/skills= copy) predates org2gantt
+and the =gantt= command.
+Copy =project-tracker/= again and verify an exact directory match.
+
 * Backlog
-No follow-ups identified.
+** TODO Regenerate the Gantt PNG in CI when project.org changes      :gantt:
+A GitHub Action using the Dockerfile, committing or uploading =plan.png=.
+** TODO Map tracker states onto the Completion column                :gantt:
+TaskJuggler shows elapsed-time % for unfinished tasks, so a NEXT item that
+has not started can read 16%. Consider =complete 0= for TODO/NEXT/BLOCKED.
+** TODO Estimate open efforts from measured history                   :gantt:
+Placeholders are a fixed guess. Derive durations for finished items from
+their =CLOSED= stamps (or commit times) and use those, for example a median
+per workstream, to estimate open items that have no =:Effort:=; keep printing
+which items were estimated.
+** TODO SVG output                                                   :gantt:
+PNG is a screenshot of TaskJuggler's HTML; SVG needs parsing that HTML or
+another renderer.
 
 * Decisions
 ** 2026-09-20 — Require both content review and the Git state check
 The script can verify staging and cleanliness; the agent must verify meaningful
 progress, truthful statuses, and captured follow-ups. The skill requires the
 workflow gate and does not automatically install a Git hook.
+
+** 2026-09-23 — org2gantt charts only open work under Workstreams
+=Now= repeats Workstreams items and =Backlog=/=Decisions= are not scheduled
+work. Closed items are pruned by default because TaskJuggler would schedule
+them into the future from today; =--include-done= keeps them.
+
+** 2026-09-23 — Missing efforts get a loud placeholder, not a guess
+Trackers rarely carry =:Effort:=. Refusing to render would make the tool
+useless on real trackers; a silent default would make the chart lie. Each
+placeholder is printed to stderr.
+
+** 2026-09-23 — Tracker mode schedules in agent time
+Tracker items are done by agents in minutes to hours, at any hour, so a
+person's 8-hour weekday calendar and a 1-day placeholder overstated every
+chart. Tracker mode uses a 24/7 calendar and a 1h placeholder; a tracker that
+sets any calendar property keeps its own. Plain mode keeps TaskJuggler's
+defaults so it stays byte-identical to ox-taskjuggler.
+
+** 2026-09-23 — Chart dependencies install per user, not system-wide
+=install-deps= puts pinned TaskJuggler and Playwright in one user directory,
+with no sudo and no change to the system Ruby or Python, so uninstalling is
+deleting that directory. Chromium's system libraries are the one step that
+needs root, so the script prints that command rather than running it. Docker
+stays a fallback, not a requirement. Only Chromium's headless shell is
+installed: org2gantt never opens a window, and the full browser is 600 MB more.
+
+** 2026-09-23 — =gantt= is an argument to the skill, not a second skill
+=/project-tracker gantt= keeps one directory to install and the renderer
+beside the instructions that call it; a separate =/gantt= skill would have to
+be installed alongside and reach into =../project-tracker/scripts=. The skill
+validator rejects frontmatter such as =argument-hint=, so the command is
+named in the description and a =<command>= section.
+
+** 2026-09-23 — org2gantt does not depend on Emacs
+The first version exported through =emacs --batch= and a vendored
+ox-taskjuggler. Rejected: Emacs is a heavy install for parsing an outline, and
+the vendored GPL-3.0 Lisp would have split this MIT repository's licensing.
+=orgtj.py= reimplements the exporter's rules in standard-library Python. It was
+checked byte for byte against Emacs + ox-taskjuggler =e682a15= in a scratch
+environment (7 fixtures, 220 random files, plain and tracker mode); the goldens
+in =tests/= came from that run, so the tests do not need Emacs. orgtj fixes two
+upstream dependency-parsing bugs: =BLOCKER= plus =depends= on one task, and
+comma lists without spaces. Both are documented and tested. The report template
+and example projects are original, not copied from the exporter or worg.
