@@ -10,8 +10,8 @@ gate in [[file:AGENTS.md][AGENTS.md]]. Detailed skill instructions live in
 [[file:project-tracker/SKILL.md][SKILL.md]].
 
 * Now
-** NEXT Build and run the org2gantt Docker image                     :gantt:
-See the WAITING item under Gantt rendering.
+** NEXT Sync the installed skill copies                              :gantt:
+See the TODO under Gantt rendering.
 
 * Workstreams
 ** Skill maintenance
@@ -49,11 +49,18 @@ efforts on stderr, and leaves the source unchanged; bad =--root= and all-closed
 trackers fail clearly. =tests/run_tests.py --tj3= passes (7 golden cases, 4
 dependency cases, 3 error paths) and fails when either dependency fix or the
 noexport filter is reverted. Skill validation passes.
-*** WAITING Dockerfile for org2gantt
-Written, never built: no container runtime in the authoring environment.
-Untested: =docker build=, Playwright's =--with-deps= on =ruby:3.3-slim=, and a
-=docker run= against a mounted tracker. The image has no Emacs.
-*** TODO Sync the installed skill copies
+*** DONE Dockerfile for org2gantt
+CLOSED: [2026-09-23 Wed 15:26]
+Built with Docker 29.3.1 and run against a mounted copy of this =project.org=
+with =--network none=: =--tracker --pdf= wrote plan/resources PNG + PDF, the
+=.tjp= matched a non-Docker run byte for byte, and the source was unchanged.
+The image (2.09 GB) has tj3 3.8.4 and no Emacs. The build environment's
+egress proxy needed its CA copied in and HTTPS apt sources; those were added
+in a scratch copy only, and the committed Dockerfile's steps ran unchanged.
+Same session: =tests/run_tests.py --tj3= passes, and the local pipeline
+(=example.org= PNG + PDF, =.tjp= input, =--tracker=, bad =--root=) works with
+TaskJuggler 3.8.4 and Playwright 1.56 Chromium.
+*** NEXT Sync the installed skill copies
 The installed GSD skill (and any =~/.claude/skills= copy) predates org2gantt.
 Copy =project-tracker/= again and verify an exact directory match.
 
@@ -63,6 +70,8 @@ A GitHub Action using the Dockerfile, committing or uploading =plan.png=.
 ** TODO Map tracker states onto the Completion column                :gantt:
 TaskJuggler shows elapsed-time % for unfinished tasks, so a NEXT item that
 has not started can read 16%. Consider =complete 0= for TODO/NEXT/BLOCKED.
+** TODO Output files from =docker run= are owned by root              :gantt:
+Document =--user "$(id -u):$(id -g)"= in the README, or set a non-root USER.
 ** TODO SVG output                                                   :gantt:
 PNG is a screenshot of TaskJuggler's HTML; SVG needs parsing that HTML or
 another renderer.
