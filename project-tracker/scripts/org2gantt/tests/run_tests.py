@@ -4,7 +4,8 @@
 golden/*.tjp were produced on 2026-09-23 by Emacs 29.3 + ox-taskjuggler
 e682a15, the exporter orgtj replaces, with orgtj.default_reports() as its
 report template, its 280-day default length, and the two dependency-parsing
-fixes orgtj makes (see DEP_CASES) applied as one-line patches. Tracker
+fixes orgtj makes (see DEP_CASES) applied as one-line patches, except
+tracker--tracker-agent.tjp (see tests/README.md). Tracker
 goldens also ran the retired Emacs Lisp tracker preprocessor. Emacs is not
 needed to run these tests. See README.md here.
 
@@ -17,7 +18,9 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import orgtj  # noqa: E402
 
-TODAY = "2026-09-23"   # date the goldens were generated; used when no start is set
+TODAY = "2026-09-23"
+# The Emacs preprocessor predates tracker mode's agent calendar and 1h default.
+EMACS_TRACKER = {"default_effort": "1d", "agent_calendar": False}   # date the goldens were generated; used when no start is set
 # torture.org and untagged.org exercise export rules, including combinations
 # tj3 rejects on purpose (effort without allocation, start+end+duration), so
 # they are parity-only; the rest must also schedule.
@@ -26,10 +29,12 @@ CASES = [
     ("example.org",      "example.tjp",                        None, True),
     ("torture.org",      "torture.tjp",                        None, False),
     ("untagged.org",     "untagged.tjp",                       None, False),
-    ("tracker.org",      "tracker--tracker.tjp",               {}, True),
-    ("tracker.org",      "tracker--tracker-include-done.tjp",  {"default_effort": "2d", "include_done": True}, True),
-    ("repo-tracker.org", "repo-tracker--tracker.tjp",          {}, True),
-    ("torture.org",      "torture--tracker.tjp",               {}, False),
+    ("tracker.org",      "tracker--tracker.tjp",               EMACS_TRACKER, True),
+    ("tracker.org",      "tracker--tracker-include-done.tjp",  {**EMACS_TRACKER, "default_effort": "2d", "include_done": True}, True),
+    ("repo-tracker.org", "repo-tracker--tracker.tjp",          EMACS_TRACKER, True),
+    ("torture.org",      "torture--tracker.tjp",               EMACS_TRACKER, False),
+    # orgtj only, reviewed by hand: tracker defaults (agent calendar, 1h).
+    ("tracker.org",      "tracker--tracker-agent.tjp",         {}, True),
 ]
 
 
@@ -83,6 +88,27 @@ def main():
         ok = got == [expect]
         failed += not ok
         print(("ok  " if ok else "FAIL") + f" deps: {label}" + ("" if ok else f": got {got}"))
+    # Deliberate fix: org's H:MM[:SS] Effort, which tj3 reads as a time of day.
+    for effort, expect in [("1:30", "effort 90min"), ("0:45", "effort 45min"),
+                           ("2:00:30", "effort 121min"), ("3d", "effort 3d"), ("2h", "effort 2h")]:
+        text = f"* P :taskjuggler_project:\n** A\n   :PROPERTIES:\n   :Effort: {effort}\n   :END:\n"
+        got = [l.strip() for l in orgtj.to_tjp(orgtj.parse(text), today=TODAY).splitlines()
+               if l.strip().startswith("effort")]
+        ok = got == [expect]
+        failed += not ok
+        print(("ok  " if ok else "FAIL") + f" effort: {effort}" + ("" if ok else f": got {got}"))
+    # Agent calendar: all or nothing, so a tracker's own calendar is left alone.
+    for head, expect in [("", ["timingresolution 15min", "dailyworkinghours 24",
+                               "workinghours mon - sun 0:00 - 24:00"]),
+                         ("   :PROPERTIES:\n   :dailyworkinghours: 8\n   :END:\n", ["dailyworkinghours 8"])]:
+        doc = orgtj.parse("* Workstreams\n" + head + "** TODO a\n")
+        orgtj.prepare_tracker(doc)
+        got = orgtj.to_tjp(doc, today=TODAY).split("}\n", 1)[0].splitlines()[1:]
+        got = [l.strip() for l in got]
+        ok = got == expect
+        failed += not ok
+        print(("ok  " if ok else "FAIL") + f" calendar: {'own' if head else 'default'}"
+              + ("" if ok else f": got {got}"))
     # error paths
     for text, kwargs, expect in [
         ("* Workstreams\n** DONE a\n", {}, "no open tasks"),

@@ -46,7 +46,7 @@ ACCOUNT_ATTRS = "aggregate credits flags".split()
 REPORT_ATTRS = ("headline columns definitions timeformat hideaccount hideresource hidetask "
                 "loadunit sorttasks formats period start end").split()
 
-SCALES = {"day": "daily", "week": "weekly", "month": "monthly", "quarter": "quarterly"}
+SCALES = {"hour": "hourly", "day": "daily", "week": "weekly", "month": "monthly", "quarter": "quarterly"}
 
 
 def default_reports(scale="week", max_width=20000):
@@ -276,6 +276,19 @@ def _attrs(h: Headline, allowed) -> str:
     return "".join(f"{a} {h.prop(a)}\n" for a in allowed if h.prop(a) is not None)
 
 
+_HMM_RE = re.compile(r"^\s*(\d+):([0-5]\d)(?::([0-5]\d))?\s*$")
+
+
+def _effort(v):
+    """Deliberate fix over ox-taskjuggler, which passes org's H:MM[:SS] Effort
+    through verbatim; tj3 reads "1:30" as a time of day and rejects it."""
+    m = _HMM_RE.match(v) if v else None
+    if not m:
+        return v
+    h, mins, secs = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
+    return f"{h * 60 + mins + (secs + 30) // 60}min"
+
+
 def _start(h):
     return h.scheduled or h.prop("START")
 
@@ -377,7 +390,7 @@ class _Exporter:
         return max(1, math.trunc(1000 * (lo - p) / (lo - hi)))
 
     def _task(self, t: Headline) -> str:
-        effort = t.prop("EFFORT")
+        effort = _effort(t.prop("EFFORT"))
         complete = "100" if t.todo in self.doc.todo_done else t.prop("COMPLETE")
         start, end = _start(t), _end(t)
         milestone = t.prop("MILESTONE") is not None or not (
@@ -462,9 +475,15 @@ def to_tjp(doc: OrgDoc, today: str | None = None, duration: int = 280, reports=N
 # --------------------------------------------------------------------------- tracker mode
 
 _SCHEDULING = ("EFFORT", "DURATION", "LENGTH", "MILESTONE")
+# Trackers hold agent work: minutes to hours, any hour of any day, so "d" is
+# 24h. Added to the project heading only if it sets none of these itself.
+AGENT_CALENDAR = {"TIMINGRESOLUTION": "15min",
+                  "WORKINGHOURS": "mon - sun 0:00 - 24:00",
+                  "DAILYWORKINGHOURS": "24"}
 
 
-def prepare_tracker(doc: OrgDoc, root="Workstreams", default_effort="1d", include_done=False):
+def prepare_tracker(doc: OrgDoc, root="Workstreams", default_effort="1h", include_done=False,
+                    agent_calendar=True):
     """Make a project-tracker file schedulable, in place on the parsed DOC.
     Returns the titles given a placeholder effort, in document order."""
     has_sched = lambda h: any(h.prop(k) is not None for k in _SCHEDULING)
@@ -489,6 +508,8 @@ def prepare_tracker(doc: OrgDoc, root="Workstreams", default_effort="1d", includ
         pass
     if not proj.children:
         raise OrgError(f'no open tasks under "{proj.title}" -- nothing to chart')
+    if agent_calendar and not any(proj.prop(k) is not None for k in AGENT_CALENDAR):
+        proj.props.update(AGENT_CALENDAR)
     placeholders = []
     for h in proj.walk():
         if h is not proj and not h.children and not has_sched(h):

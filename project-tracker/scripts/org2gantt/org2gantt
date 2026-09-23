@@ -78,8 +78,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", type=pathlib.Path, help=".org or .tjp file")
     ap.add_argument("-o", "--out", type=pathlib.Path, default=pathlib.Path("gantt-out"))
-    ap.add_argument("--timescale", default="week", choices=list(orgtj.SCALES),
-                    help="chart granularity; finer = wider image")
+    ap.add_argument("--timescale", choices=list(orgtj.SCALES),
+                    help="chart granularity; finer = wider image (default hour with --tracker, else week)")
     ap.add_argument("--start", help="plan start YYYY-MM-DD if the project headline has none (default today)")
     ap.add_argument("--duration", type=int, default=365, help="project length in days if no end is set")
     ap.add_argument("--scale", type=float, default=2, help="PNG pixel ratio (2 = retina)")
@@ -92,9 +92,10 @@ def main():
                    help="input is a project-tracker file: root it at --root, prune closed items, "
                         "add a Team resource and placeholder efforts if missing")
     t.add_argument("--root", default="Workstreams", help="top-level heading to chart (default Workstreams)")
-    t.add_argument("--default-effort", default="1d", help="Effort for open leaves that have none (default 1d)")
+    t.add_argument("--default-effort", default="1h", help="Effort for open leaves that have none (default 1h)")
     t.add_argument("--include-done", action="store_true", help="keep DONE/DROPPED items in the chart")
     a = ap.parse_args()
+    a.timescale = a.timescale or ("hour" if a.tracker else "week")
 
     if not a.input.is_file():
         fail(f"no such file: {a.input}")

@@ -45,9 +45,9 @@ Output in `-o DIR` (default `gantt-out`): `plan.png`, `resources.png`,
 |---|---|---|
 | `--tracker` | off | treat input as a project-tracker file (below) |
 | `--root HEADING` | `Workstreams` | top-level heading charted in tracker mode |
-| `--default-effort E` | `1d` | Effort given to open leaves that have none |
+| `--default-effort E` | `1h` | Effort given to open leaves that have none |
 | `--include-done` | off | keep `DONE`/`DROPPED` items |
-| `--timescale day\|week\|month\|quarter` | `week` | chart granularity; finer = wider image |
+| `--timescale hour\|day\|week\|month\|quarter` | `hour` with `--tracker`, else `week` | chart granularity; finer = wider image |
 | `--start YYYY-MM-DD` | today | plan start when the project headline has no `SCHEDULED`/`:start:` |
 | `--duration N` | `365` | project length in days when no end is set |
 | `--scale N` | `2` | PNG pixel ratio |
@@ -69,6 +69,7 @@ memory:
 | Cut keyword-less leaves (notes, emptied workstreams) | they would otherwise chart as milestones |
 | Give open leaves without Effort/duration/length/milestone `--default-effort`, printed to stderr | a placeholder is never silent |
 | Add a one-person `Team` resource if none is tagged `:taskjuggler_resource:` | TaskJuggler rejects effort without an allocation; with one person, work is serialized |
+| Use an agent calendar: `timingresolution 15min`, `workinghours mon - sun 0:00 - 24:00`, `dailyworkinghours 24` — unless the project heading sets any of these | tracker work is done by agents in minutes to hours, around the clock; so `1d` is 24 hours, not a person's 8 |
 | Fail with `no open tasks` if nothing is left | better than an empty chart |
 
 For a real schedule, put the data in the tracker:
@@ -122,6 +123,7 @@ Properties are not inherited, as in the exporter.
 |---|---|---|
 | `:BLOCKER: a` and `:depends: b` on one task | joined as `ab`; both lost | two dependencies |
 | `:BLOCKER: a,b` (no space) | one id `a,b`; lost | two dependencies |
+| `:Effort: 1:30` (org's H:MM[:SS]) | passed through; tj3 reads a time of day and fails | `effort 90min` |
 | Tracker mode vs export filters | n/a (was a pre-export Emacs step) | filters first, so hidden-only work fails with `no open tasks` |
 
 ## Gotchas
@@ -129,6 +131,7 @@ Properties are not inherited, as in the exporter.
 | Issue | Detail |
 |---|---|
 | Completion column | unless `complete` is set, TaskJuggler shows elapsed-time %, not tracked progress |
+| Effort below the timing resolution | tj3 rounds it to the resolution (60 min outside tracker mode) without a warning; set `:timingresolution:` on the project heading |
 | Reproducible images | set `:start:` on the project heading or pass `--start`, else the plan starts today |
 | Chart width | task span × timescale; `--max-width` only truncates |
 | Property drawers | must directly follow the heading or its planning line, or org (and orgtj) ignores them |
