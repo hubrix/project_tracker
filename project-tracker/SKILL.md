@@ -1,6 +1,6 @@
 ---
 name: project-tracker
-description: Keep a repository's next steps in a `project.org` org-mode tracker across sessions. Use when starting work in a repo with a tracker, before every commit (require a meaningful staged tracker update and pass the commit gate), when finishing a step, discovering follow-ups, or settling decisions, and when adopting a tracker for work that spans sessions or branches.
+description: Keep a repository's next steps in a `project.org` org-mode tracker across sessions. Use when starting work in a repo with a tracker, before every commit (require a meaningful staged tracker update and pass the commit gate), when finishing a step, discovering follow-ups, or settling decisions, and when adopting a tracker for work that spans sessions or branches. Invoked with the argument `gantt` (`/project-tracker gantt [options]`), render the tracker's open work as a Gantt chart.
 ---
 
 <objective>
@@ -186,20 +186,53 @@ and re-reads it whenever anyone writes — you, this agent, or a subagent it
 spawned. However you look at it, the file itself is the state; nothing about
 this skill depends on a particular viewer.
 
-To see the remaining work as a schedule, `scripts/org2gantt` renders the
-tracker as a Gantt chart and resource-loading chart through the TaskJuggler
-scheduler:
+To see the remaining work as a schedule, render it as a Gantt chart with the
+`gantt` command below. It charts the open items under `* Workstreams` through
+the TaskJuggler scheduler and leaves the file untouched. Open items without an
+`:Effort:` get a placeholder and are listed on stderr, so the chart is only as
+honest as the efforts and `:BLOCKER:`s in the tracker.
+</seeing_it>
+
+<command name="gantt">
+When this skill is invoked with the argument `gantt` (for example
+`/project-tracker gantt` or `/project-tracker gantt --timescale day`), or asked
+for a Gantt chart of the tracker, run from the repository:
 
 ```bash
-<skill-dir>/scripts/org2gantt/org2gantt --tracker project.org -o gantt-out
+sh <skill-dir>/scripts/gantt [options]
 ```
 
-It charts the open items under `* Workstreams` and leaves the file untouched.
-Open items without an `:Effort:` get a placeholder and are listed on stderr, so
-the chart is only as honest as the efforts and `:BLOCKER:`s in the tracker.
-It needs Python, TaskJuggler (`gem install taskjuggler`) and Playwright;
-no Emacs. Options are in `scripts/org2gantt/README.md`.
-</seeing_it>
+Pass any words after `gantt` through as options; they are
+`scripts/org2gantt/README.md`'s flags (`--timescale hour|day|week|month|quarter`,
+`--pdf`, `-o DIR`, `--start YYYY-MM-DD`, `--include-done`, `--root HEADING`,
+`--default-effort E`). The script finds `project.org` at the repository root,
+writes to `gantt-out/` by default, and prints the paths of `plan.png`,
+`resources.png` and, with `--pdf`, `plan.pdf`.
+
+Then:
+1. Show the user `plan.png` (and `resources.png` if they asked about load).
+2. Relay every `placeholder Effort` line from stderr: those items have no
+   `:Effort:`, so their bars are a guess. Offer to add real efforts,
+   `:BLOCKER:`s or `:ORDERED:` to the tracker; do not add them unasked.
+3. Say that Completion is elapsed-time %, not progress, if it shows on
+   unstarted items.
+4. Leave `gantt-out/` out of commits: it is a rendering, not tracker state.
+   If it would show up as untracked, offer to add it to `.gitignore`.
+
+Tracker mode schedules in agent time: a 24/7 calendar, a 1h placeholder, and
+an hour-wide chart; the project heading's own `:workinghours:`,
+`:dailyworkinghours:` or `:timingresolution:` replace that calendar. If the
+chart is too wide to read, rerun with `--timescale day`.
+
+The script runs `scripts/org2gantt` locally when `tj3` (`gem install
+taskjuggler`) and Python Playwright (`pip install playwright && playwright
+install chromium`) are installed, and otherwise a local Docker image built with
+`docker build -t org2gantt <skill-dir>/scripts/org2gantt`. Neither Docker nor
+Emacs is required. The image copies the renderer in when it is built, so
+rebuild it after updating the skill. If neither route is available the script
+exits non-zero with install instructions: report them rather than installing
+software unasked.
+</command>
 
 <success_criteria>
 - The tracker was read before the work started, and the work came from `NEXT`.

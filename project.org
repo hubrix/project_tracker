@@ -76,8 +76,23 @@ CLOSED: [2026-09-23 Wed 16:10]
 failed (=Unexpected token '5400'=). orgtj now writes =effort 90min=
 (H:MM and H:MM:SS, seconds rounded half up); unit forms like =3d= pass through.
 Five unit cases pass. Documented with the other deliberate differences.
+*** DONE Add the =gantt= skill command
+CLOSED: [2026-09-23 Wed 16:08]
+=/project-tracker gantt [options]= runs the new =scripts/gantt=, which finds
+the repository's =project.org=, runs =org2gantt --tracker= locally (tj3 and
+Playwright) or through a local =org2gantt= image, and prints the image paths.
+SKILL.md's =<command name="gantt">= says to show the chart, relay placeholder
+efforts, and keep =gantt-out/= (now in =.gitignore=) out of commits. Verified:
+local run from a subdirectory; =-o DIR=, =--out=DIR=, =--timescale day --pdf=;
+Docker fallback with tj3 off PATH; clear failures with no =project.org=, a bad
+option, or neither tool route. Skill validation passes.
+The Docker test showed the image ran as root and Chromium was unreachable for
+any other user; the Dockerfile now sets =PLAYWRIGHT_BROWSERS_PATH= and =HOME=.
+Rebuilt and run with =--user 1000:1000 --network none=: PNG + PDF owned by
+uid 1000, with the current 1h placeholders.
 *** NEXT Sync the installed skill copies
-The installed GSD skill (and any =~/.claude/skills= copy) predates org2gantt.
+The installed GSD skill (and any =~/.claude/skills= copy) predates org2gantt
+and the =gantt= command.
 Copy =project-tracker/= again and verify an exact directory match.
 
 * Backlog
@@ -86,8 +101,6 @@ A GitHub Action using the Dockerfile, committing or uploading =plan.png=.
 ** TODO Map tracker states onto the Completion column                :gantt:
 TaskJuggler shows elapsed-time % for unfinished tasks, so a NEXT item that
 has not started can read 16%. Consider =complete 0= for TODO/NEXT/BLOCKED.
-** TODO Output files from =docker run= are owned by root              :gantt:
-Document =--user "$(id -u):$(id -g)"= in the README, or set a non-root USER.
 ** TODO Estimate open efforts from measured history                   :gantt:
 Placeholders are a fixed guess. Derive durations for finished items from
 their =CLOSED= stamps (or commit times) and use those, for example a median
@@ -119,6 +132,13 @@ person's 8-hour weekday calendar and a 1-day placeholder overstated every
 chart. Tracker mode uses a 24/7 calendar and a 1h placeholder; a tracker that
 sets any calendar property keeps its own. Plain mode keeps TaskJuggler's
 defaults so it stays byte-identical to ox-taskjuggler.
+
+** 2026-09-23 — =gantt= is an argument to the skill, not a second skill
+=/project-tracker gantt= keeps one directory to install and the renderer
+beside the instructions that call it; a separate =/gantt= skill would have to
+be installed alongside and reach into =../project-tracker/scripts=. The skill
+validator rejects frontmatter such as =argument-hint=, so the command is
+named in the description and a =<command>= section.
 
 ** 2026-09-23 — org2gantt does not depend on Emacs
 The first version exported through =emacs --batch= and a vendored

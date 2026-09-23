@@ -1,0 +1,38 @@
+#!/bin/sh
+# Render the repository's project.org as a Gantt chart: the `gantt` command.
+#   gantt [org2gantt options]     e.g. gantt --timescale day --pdf
+# Runs org2gantt --tracker locally when tj3 and Playwright are installed, else
+# through a local `org2gantt` Docker image. Writes to gantt-out/ unless -o is given.
+set -eu
+
+fail() {
+   printf 'gantt: %s\n' "$1" >&2
+   exit 1
+}
+
+here=$(cd "$(dirname "$0")" && pwd)
+root=$(git rev-parse --show-toplevel 2>/dev/null) || root=$(pwd)
+cd "$root"
+[ -f project.org ] || fail "no project.org in $root"
+
+out=gantt-out
+prev=
+for arg in "$@"; do
+   case $prev in -o|--out) out=$arg ;; esac
+   case $arg in --out=*) out=${arg#--out=} ;; esac
+   prev=$arg
+done
+
+if command -v tj3 >/dev/null 2>&1 && python3 -c 'import playwright' 2>/dev/null; then
+   "$here/org2gantt/org2gantt" --tracker project.org -o gantt-out "$@" >/dev/null
+elif command -v docker >/dev/null 2>&1 && docker image inspect org2gantt >/dev/null 2>&1; then
+   docker run --rm --user "$(id -u):$(id -g)" -v "$root:/work" org2gantt \
+      --tracker project.org -o gantt-out "$@" >/dev/null
+else
+   fail "needs tj3 and Playwright (gem install taskjuggler; pip install playwright && playwright install chromium), or: docker build -t org2gantt $here/org2gantt"
+fi
+
+case $out in /*) ;; *) out=$root/$out ;; esac
+[ -f "$out/plan.png" ] || fail "no chart written to $out"
+printf '%s\n' "$out/plan.png" "$out/resources.png"
+if [ -f "$out/plan.pdf" ]; then printf '%s\n' "$out/plan.pdf"; fi

@@ -1,4 +1,6 @@
 FROM ruby:3.3-slim
+# Browsers outside /root and a writable HOME, so `docker run --user` works.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright HOME=/tmp
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip \
  && gem install taskjuggler --no-document \
  && pip3 install --break-system-packages playwright \

@@ -26,8 +26,14 @@ Or build the image from this directory:
 
 ```sh
 docker build -t org2gantt .
-docker run --rm -v "$PWD:/work" org2gantt --tracker project.org -o gantt-out
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" org2gantt --tracker project.org -o gantt-out
 ```
+
+In a project-tracker repository, `sh ../gantt [options]` (the skill's `gantt`
+command) wraps this: it runs `--tracker project.org -o gantt-out` from the
+repository root, locally or through the image, and prints the image paths.
+The image copies `org2gantt` and `orgtj.py` in when it is built, so rebuild it
+after changing them.
 
 ## Usage
 
